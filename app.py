@@ -49,7 +49,19 @@ if archivo and st.button("Calcular rutas", type="primary"):
     with st.spinner("Calculando rutas óptimas..."):
         rutas, sobre = solve((depot_lat, depot_lon), ok, capacidad)
 
+    if not rutas:
+        st.error("No se pudo armar ninguna ruta. Probablemente todos los "
+                 "pedidos superan la capacidad del vehículo — revisá los "
+                 "avisos de abajo y/o subí la capacidad.")
+        if sobre:
+            st.dataframe([{"cliente": c.cliente, "cantidad": c.cantidad}
+                          for c in sobre])
+        st.stop()
+
     st.success(f"{len(rutas)} días de reparto para {sum(len(r.stops) for r in rutas)} clientes.")
+    st.caption("Distancias y orden de visita calculados en línea recta "
+               "(no por calles). Sirven para agrupar zonas; el recorrido fino "
+               "lo ajusta el repartidor.")
 
     # Resumen por día
     resumen = [{

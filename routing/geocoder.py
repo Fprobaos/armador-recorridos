@@ -40,17 +40,21 @@ class Geocoder:
 
     def geocode_clients(self, clients: list[Client]):
         ok, fallidos = [], []
-        for c in clients:
-            clave = _clave(c)
-            coord = self.cache.get(clave)
-            if coord is None:
-                coord = self.geocode_fn(clave)
-                if coord is not None:
-                    self.cache[clave] = [coord[0], coord[1]]
-            if coord is None:
-                fallidos.append(c)
-                continue
-            c.lat, c.lon = coord[0], coord[1]
-            ok.append(c)
-        self._guardar()
+        try:
+            for c in clients:
+                clave = _clave(c)
+                coord = self.cache.get(clave)
+                if coord is None:
+                    coord = self.geocode_fn(clave)
+                    if coord is not None:
+                        self.cache[clave] = [coord[0], coord[1]]
+                if coord is None:
+                    fallidos.append(c)
+                    continue
+                c.lat, c.lon = coord[0], coord[1]
+                ok.append(c)
+        finally:
+            # Persistir el cache aunque geocode_fn falle a mitad (timeout/rate
+            # limit): no se pierde lo ya resuelto en esta corrida.
+            self._guardar()
         return ok, fallidos

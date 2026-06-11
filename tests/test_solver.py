@@ -58,3 +58,18 @@ def test_distancia_km_por_ruta_es_positiva():
     clientes = [_c("A", -34.61, -58.39, 1), _c("B", -34.90, -57.95, 1)]
     rutas, _ = solve(DEPOT, clientes, capacidad=100)
     assert all(r.distancia_km > 0 for r in rutas)
+
+
+def test_todos_sobredimensionados_no_genera_rutas():
+    clientes = [_c("A", -34.61, -58.39, 50), _c("B", -34.62, -58.40, 80)]
+    rutas, sobre = solve(DEPOT, clientes, capacidad=10)
+    assert rutas == []
+    assert [c.cliente for c in sobre] == ["A", "B"]
+
+
+def test_un_solo_cliente_genera_un_dia_con_una_parada():
+    rutas, sobre = solve(DEPOT, [_c("Unico", -34.61, -58.39, 3)], capacidad=10)
+    assert sobre == []
+    assert len(rutas) == 1
+    assert len(rutas[0].stops) == 1
+    assert rutas[0].stops[0].client.cliente == "Unico"

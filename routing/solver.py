@@ -63,7 +63,6 @@ def solve(depot, clients: list[Client], capacidad: float, max_dias=None):
         ruta = Route(dia=dia)
         orden = 0
         dist_m = 0
-        prev = idx
         while not routing.IsEnd(idx):
             nodo = manager.IndexToNode(idx)
             if nodo != 0:
