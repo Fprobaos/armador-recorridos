@@ -32,13 +32,21 @@ if archivo and st.button("Calcular rutas", type="primary"):
         st.stop()
 
     api_key = st.secrets.get("GOOGLE_MAPS_API_KEY")
-    if not api_key:
-        st.error("Falta configurar GOOGLE_MAPS_API_KEY en los secrets de "
-                 "Streamlit. Ver README.")
+    if not api_key or api_key == "PEGA_TU_KEY_ACA":
+        st.error("Falta cargar tu Google Maps API key en "
+                 "`.streamlit/secrets.toml` (o en los Secrets de Streamlit "
+                 "Cloud). Ver README.")
+        st.stop()
+
+    try:
+        geocode_fn = google_geocode_fn(api_key)
+    except ValueError:
+        st.error("La API key fue rechazada por Google. Revisá que sea válida "
+                 "y que tenga habilitada la Geocoding API.")
         st.stop()
 
     with st.spinner("Geocodificando direcciones..."):
-        geocoder = Geocoder(CACHE_PATH, google_geocode_fn(api_key))
+        geocoder = Geocoder(CACHE_PATH, geocode_fn)
         ok, fallidos = geocoder.geocode_clients(clientes)
 
     if not ok:
