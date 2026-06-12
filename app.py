@@ -64,6 +64,7 @@ if archivo and st.button("Calcular rutas", type="primary"):
         rutas, sobre = solve(DEPOT, ok, capacidad, fin=fin_coord)
 
     if not rutas:
+        st.session_state.pop("resultado", None)
         st.error("No se pudo armar ninguna ruta. Probablemente todos los "
                  "pedidos superan la capacidad del vehículo — revisá los "
                  "avisos de abajo y/o subí la capacidad.")
@@ -72,7 +73,30 @@ if archivo and st.button("Calcular rutas", type="primary"):
                           for c in sobre])
         st.stop()
 
-    st.success(f"{len(rutas)} días de reparto para {sum(len(r.stops) for r in rutas)} clientes.")
+    # Guardar el resultado en session_state. st_folium es un componente
+    # bidireccional que dispara reruns; los botones devuelven False en esos
+    # reruns, así que el output NO puede vivir dentro del if del botón o
+    # desaparece. Lo persistimos acá y lo renderizamos afuera.
+    st.session_state["resultado"] = {
+        "rutas": rutas,
+        "sobre": sobre,
+        "fin_coord": fin_coord,
+        "fallidos": fallidos,
+        "revisar": revisar,
+    }
+
+# Render fuera del bloque del botón: corre en cada rerun leyendo de
+# session_state, así el output sobrevive a los reruns que dispara st_folium.
+if "resultado" in st.session_state:
+    res = st.session_state["resultado"]
+    rutas = res["rutas"]
+    sobre = res["sobre"]
+    fin_coord = res["fin_coord"]
+    fallidos = res["fallidos"]
+    revisar = res["revisar"]
+
+    st.success(f"{len(rutas)} días de reparto para "
+               f"{sum(len(r.stops) for r in rutas)} clientes.")
     st.caption("Distancias y orden de visita calculados en línea recta "
                "(no por calles). Sirven para agrupar zonas; el recorrido fino "
                "lo ajusta el repartidor.")
