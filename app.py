@@ -4,6 +4,7 @@ from routing.excel_loader import load_clients, ColumnaFaltante
 from routing.geocoder import Geocoder, google_geocode_fn
 from routing.solver import solve
 from routing.map_render import render_map
+from routing.gmaps_links import ruta_a_gmaps_url
 from routing.exporter import to_result_dataframe, to_excel_bytes
 
 CACHE_PATH = "geocode_cache.json"
@@ -83,6 +84,7 @@ if archivo and st.button("Calcular rutas", type="primary"):
         "fin_coord": fin_coord,
         "fallidos": fallidos,
         "revisar": revisar,
+        "dudosas": list(geocode_fn.dudosas),
     }
 
 # Render fuera del bloque del botón: corre en cada rerun leyendo de
@@ -94,6 +96,7 @@ if "resultado" in st.session_state:
     fin_coord = res["fin_coord"]
     fallidos = res["fallidos"]
     revisar = res["revisar"]
+    dudosas = res["dudosas"]
 
     st.success(f"{len(rutas)} días de reparto para "
                f"{sum(len(r.stops) for r in rutas)} clientes.")
@@ -116,6 +119,17 @@ if "resultado" in st.session_state:
     st_folium(render_map(DEPOT, rutas, fin=fin_coord),
               use_container_width=True, height=600)
 
+    # Botones de Google Maps por día
+    st.subheader("Abrir en Google Maps")
+    st.caption("Cada día abre la navegación real por calles, parada por "
+               "parada, en el orden calculado.")
+    for r in rutas:
+        url = ruta_a_gmaps_url(DEPOT, r, fin=fin_coord)
+        st.link_button(f"🗺️ Día {r.dia} ({len(r.stops)} paradas)", url)
+        if len(r.stops) > 10:
+            st.caption("⚠️ Más de 10 paradas: Google Maps puede recortar "
+                       "la ruta.")
+
     # Descarga
     df = to_result_dataframe(rutas)
     st.download_button(
@@ -134,6 +148,10 @@ if "resultado" in st.session_state:
         st.warning("Direcciones que Google no encontró (corregir y reprocesar):")
         st.dataframe([{"fila": c.fila, "cliente": c.cliente,
                        "direccion": c.direccion} for c in fallidos])
+    if dudosas:
+        st.warning("Direcciones que Google ubicó de forma aproximada "
+                   "(revisá que estén bien):")
+        st.dataframe([{"direccion": d} for d in dudosas])
     if revisar:
         st.warning("Filas con datos inválidos:")
         st.dataframe(revisar)

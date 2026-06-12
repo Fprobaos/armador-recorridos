@@ -52,3 +52,30 @@ def test_cache_persiste_en_disco(tmp_path):
         [_cliente("Calle 9")])
     guardado = json.loads(cache.read_text(encoding="utf-8"))
     assert guardado["Calle 9"] == [-1.0, -2.0]
+
+
+from unittest.mock import patch, MagicMock
+from routing.geocoder import google_geocode_fn
+
+
+def test_google_geocode_fn_restringe_a_argentina():
+    fake_gm = MagicMock()
+    fake_gm.geocode.return_value = [
+        {"geometry": {"location": {"lat": -34.5, "lng": -58.5}}}]
+    with patch("googlemaps.Client", return_value=fake_gm):
+        fn = google_geocode_fn("FAKE")
+        coord = fn("Av. Centenario 1000, San Isidro")
+    assert coord == (-34.5, -58.5)
+    _, kwargs = fake_gm.geocode.call_args
+    assert kwargs.get("components") == {"country": "AR"}
+
+
+def test_google_geocode_fn_registra_partial_match():
+    fake_gm = MagicMock()
+    fake_gm.geocode.return_value = [
+        {"partial_match": True,
+         "geometry": {"location": {"lat": -34.5, "lng": -58.5}}}]
+    with patch("googlemaps.Client", return_value=fake_gm):
+        fn = google_geocode_fn("FAKE")
+        fn("Direccion rara")
+    assert fn.dudosas == ["Direccion rara"]

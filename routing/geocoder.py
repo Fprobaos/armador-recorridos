@@ -11,17 +11,26 @@ def _clave(client: Client) -> str:
 
 
 def google_geocode_fn(api_key: str) -> Callable[[str], tuple | None]:
-    """Crea una geocode_fn real usando el cliente de googlemaps."""
+    """Crea una geocode_fn real usando el cliente de googlemaps.
+
+    Restringe los resultados a Argentina (components country=AR) para que
+    direcciones ambiguas no caigan en otro país. Registra en `_fn.dudosas`
+    las consultas que Google resolvió con partial_match (sin match exacto).
+    """
     import googlemaps
     gm = googlemaps.Client(key=api_key)
+    dudosas: list[str] = []
 
     def _fn(q: str):
-        res = gm.geocode(q, region="ar")
+        res = gm.geocode(q, components={"country": "AR"})
         if not res:
             return None
+        if res[0].get("partial_match"):
+            dudosas.append(q)
         loc = res[0]["geometry"]["location"]
         return (loc["lat"], loc["lng"])
 
+    _fn.dudosas = dudosas
     return _fn
 
 
