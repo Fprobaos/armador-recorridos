@@ -73,3 +73,25 @@ def test_un_solo_cliente_genera_un_dia_con_una_parada():
     assert len(rutas) == 1
     assert len(rutas[0].stops) == 1
     assert rutas[0].stops[0].client.cliente == "Unico"
+
+
+FIN = (-34.90, -57.95)
+
+
+def test_ruta_termina_en_cliente_mas_cercano_al_fin():
+    clientes = [
+        _c("Cerca_depot", -34.61, -58.39, 1),
+        _c("Medio", -34.75, -58.15, 1),
+        _c("Cerca_fin", -34.89, -57.96, 1),
+    ]
+    rutas, _ = solve(DEPOT, clientes, capacidad=100, fin=FIN)
+    assert len(rutas) == 1
+    assert rutas[0].stops[-1].client.cliente == "Cerca_fin"
+
+
+def test_fin_none_mantiene_comportamiento():
+    clientes = [_c("A", -34.61, -58.39, 1), _c("B", -34.62, -58.40, 1)]
+    rutas, sobre = solve(DEPOT, clientes, capacidad=100, fin=None)
+    asignados = sorted(s.client.cliente for r in rutas for s in r.stops)
+    assert asignados == ["A", "B"]
+    assert sobre == []

@@ -10,23 +10,35 @@ def _num_dias_minimo(demandas: list[int], capacidad: int) -> int:
     return max(1, por_pico)
 
 
-def solve(depot, clients: list[Client], capacidad: float, max_dias=None):
+def solve(depot, clients: list[Client], capacidad: float, max_dias=None, fin=None):
     capacidad = int(capacidad)
     sobre = [c for c in clients if int(math.ceil(c.cantidad)) > capacidad]
     validos = [c for c in clients if int(math.ceil(c.cantidad)) <= capacidad]
     if not validos:
         return [], sobre
 
-    # indice 0 = depot; 1..N = clientes
+    # indice 0 = depot; 1..N = clientes; (si hay fin) N+1 = punto de fin
     puntos = [depot] + [(c.lat, c.lon) for c in validos]
-    matriz = build_distance_matrix(puntos)
     demandas = [0] + [int(math.ceil(c.cantidad)) for c in validos]
+    if fin is not None:
+        puntos.append(fin)
+        demandas.append(0)
 
-    min_dias = _num_dias_minimo(demandas[1:], capacidad)
+    matriz = build_distance_matrix(puntos)
+
+    min_dias = _num_dias_minimo(
+        [int(math.ceil(c.cantidad)) for c in validos], capacidad)
     # holgura de vehiculos para que el solver tenga margen
     num_vehiculos = max_dias or (min_dias + len(validos))
 
-    manager = pywrapcp.RoutingIndexManager(len(puntos), num_vehiculos, 0)
+    if fin is None:
+        manager = pywrapcp.RoutingIndexManager(len(puntos), num_vehiculos, 0)
+    else:
+        fin_idx = len(puntos) - 1
+        manager = pywrapcp.RoutingIndexManager(
+            len(puntos), num_vehiculos,
+            [0] * num_vehiculos, [fin_idx] * num_vehiculos)
+
     routing = pywrapcp.RoutingModel(manager)
 
     def dist_cb(i, j):

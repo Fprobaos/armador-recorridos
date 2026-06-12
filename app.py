@@ -7,6 +7,7 @@ from routing.map_render import render_map
 from routing.exporter import to_result_dataframe, to_excel_bytes
 
 CACHE_PATH = "geocode_cache.json"
+DEPOT = (-34.557597673622126, -58.47277351349536)
 
 st.set_page_config(page_title="Armador de Recorridos", layout="wide")
 st.title("🥚 Armador de Recorridos")
@@ -16,12 +17,10 @@ with st.sidebar:
     capacidad = st.number_input(
         "Capacidad del vehículo (maples/cajones)",
         min_value=1, value=100, step=1)
-    depot_lat = st.number_input("Latitud del depósito",
-                                value=-34.6037, format="%.6f")
-    depot_lon = st.number_input("Longitud del depósito",
-                                value=-58.3816, format="%.6f")
-    st.caption("Cargá las coordenadas de tu depósito (Google Maps → "
-               "clic derecho → copiar lat/long).")
+    st.caption(f"Depósito fijo: {DEPOT[0]:.5f}, {DEPOT[1]:.5f}")
+    zona_fin = st.text_input(
+        "Zona donde termina el repartidor (opcional)",
+        help="Ej: Boulogne, San Isidro. Vacío = la ruta vuelve al depósito.")
 
 archivo = st.file_uploader("Subí el Excel de clientes", type=["xlsx"])
 
@@ -46,8 +45,15 @@ if archivo and st.button("Calcular rutas", type="primary"):
         st.error("Ninguna dirección pudo geocodificarse. Revisá la planilla.")
         st.stop()
 
+    fin_coord = None
+    if zona_fin.strip():
+        fin_coord = geocoder.geocode_fn(zona_fin.strip())
+        if fin_coord is None:
+            st.warning(f"No se pudo ubicar la zona de fin «{zona_fin}». "
+                       "Las rutas vuelven al depósito.")
+
     with st.spinner("Calculando rutas óptimas..."):
-        rutas, sobre = solve((depot_lat, depot_lon), ok, capacidad)
+        rutas, sobre = solve(DEPOT, ok, capacidad, fin=fin_coord)
 
     if not rutas:
         st.error("No se pudo armar ninguna ruta. Probablemente todos los "
@@ -75,7 +81,7 @@ if archivo and st.button("Calcular rutas", type="primary"):
 
     # Mapa
     st.subheader("Mapa de rutas")
-    st_folium(render_map((depot_lat, depot_lon), rutas),
+    st_folium(render_map(DEPOT, rutas, fin=fin_coord),
               use_container_width=True, height=600)
 
     # Descarga

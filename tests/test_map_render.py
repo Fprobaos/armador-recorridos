@@ -33,3 +33,10 @@ def test_dias_distintos_usan_colores_distintos():
     from routing.map_render import PALETA
     presentes = [col for col in PALETA if col in html]
     assert len(presentes) >= 2
+
+
+def test_marcador_de_fin_cuando_hay_zona():
+    rutas = [_ruta(1, [(-34.61, -58.39)])]
+    m = render_map((-34.60, -58.38), rutas, fin=(-34.90, -57.95))
+    html = m.get_root().render()
+    assert "Zona de fin" in html
